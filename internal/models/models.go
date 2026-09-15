@@ -1,6 +1,7 @@
 package models
 
-import 
+import "time"
+
 // pagedata represents the extracted information from a single webpage
 type PageData struct {
 	URl		string `json:"url"`
