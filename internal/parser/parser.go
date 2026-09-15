@@ -1,16 +1,29 @@
 package parser
 
 import (
-	"os"
-	"regexp"
+	"io"
+	"net/url"
+	"golang.org/x/net/html"
+	"fmt"
 )
-
-func ParseFIle(filename string) (string, error) {
-	file, err := os.Open(filename)
+// sets up a function to accept the io reader and baseline url string
+func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, error) {
+	baseURL, _ := url.Parse(rawBaseURL)
+	// takes raw text urls and conerts to structured url.URL object.
+	doc, err :=html.Parse(r)
 	if err != nil {
-		return "", err
+		return "", nil, nil, fmt.Errorf("failed to parse HTML: %w", err)
 	}
-	defer file.Close()
+	var title string
+	var links []string
+	var links []string
 
-	linkRegex := regexp.
+	var traverse func(*html.Node)
+	traverse = func(n *html.Node) {
+		if n.Type == html.ElementNode {
+			switch n.Data {
+				case "title"
+			}
+		}
+	}
 }
