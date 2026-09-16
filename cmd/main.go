@@ -5,6 +5,8 @@ import (
 	"time"
 	"log"
 	"fmt"
+	"go-cli-web-scraper/internal/scraper"
+	"go-cli-web-scraper/internal/fetcher"
 )
 
 func main() {
@@ -19,10 +21,24 @@ func main() {
 	if len(args) <1 {
 		log.Fatal("Usage: go run cmd/min.go [options] <URL or local file path>\nExample: go run cmd/main.go https://example.com")
 	}
+	//Extract the Primary target (URL or local path) from the validated arguments
 	target := args[0]
+	// Initialize the HTTP fetcher using the duration configured from the cli flag
 	f := fetcher.New(*timeout)
-	s := Scraper.New(f)
+	//inject the fetcher into the scraper service ingine
+	s := scraper.New(f)
 
 	fmt.Printf("Scraping target: %...\n", target)
+	//Execute the core scraping and parsing processing pipline
 	data, err := s.Scrape(target)
+	if err != nil {
+		log.Fatalf("Error: %v", err)
+	}
+
+	//output the extracted webpage metadata directly to the terminal.
+	fmt.Printf("\nTitle: %s\n", data.Title)
+	fmt.Printf("Links Found(%d):\n", len(data.Links))
+	for _, link := range data.Links {
+		fmt.Printf(" - %s\n", link)
+	}
 }
