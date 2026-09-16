@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+<<<<<<< HEAD
 	"go-cli-web-scraper/internal/fetcher"
 	"go-cli-web-scraper/internal/scraper"
 	"log"
@@ -20,21 +21,33 @@ func main() {
 	// Ensure atleast one argument (the target URL or file path) was porvided
 	if len(args) < 1 {
 		log.Fatal("Usage: go run cmd/min.go [options] <URL or local file path>\nExample: go run cmd/main.go https://example.com")
-	}
-	//Extract the Primary target (URL or local path) from the validated arguments
-	target := args[0]
-	// Initialize the HTTP fetcher using the duration configured from the cli flag
-	f := fetcher.New(*timeout)
-	//inject the fetcher into the scraper service ingine
-	s := scraper.New(f)
+=======
+	urlpkg "net/url"
+	"os"
+)
 
+func main() {
+	if len(os.Args) < 2 {
+		fmt.Println("Please provide a URL")
+		return
+>>>>>>> 697ee6768f4d0b944ac062e2f6a3b70c703d6879
+	}
+
+<<<<<<< HEAD
 	fmt.Printf("Scraping target: %s...\n", target)
 	//Execute the core scraping and parsing processing pipline
 	data, err := s.Scrape(target)
+=======
+	url := os.Args[1]
+
+	_, err := urlpkg.ParseRequestURI(url)
+>>>>>>> 697ee6768f4d0b944ac062e2f6a3b70c703d6879
 	if err != nil {
-		log.Fatalf("Error: %v", err)
+		fmt.Println("Invalid URL")
+		return
 	}
 
+<<<<<<< HEAD
 	//output the extracted webpage metadata directly to the terminal.
 	fmt.Printf("\nTitle: %s\n", data.Title)
 	fmt.Printf("Links Found(%d):\n", len(data.Links))
@@ -46,4 +59,7 @@ func main() {
 	for _, img := range data.Images {
 		fmt.Printf(" -%s\n", img)
 	}
+=======
+	fmt.Println("Valid URL:", url)
+>>>>>>> 697ee6768f4d0b944ac062e2f6a3b70c703d6879
 }
