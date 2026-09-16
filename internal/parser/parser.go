@@ -35,7 +35,16 @@ func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, err
 						}
 					}
 				}
-
+			case "img":
+				for _, attr := range n.Attr {
+					if attr.Key == "src" {
+						resolved := resolveURL(baseURL, attr.Val)
+						if resolved != "" {
+							images = append(images, reolvec)
+						}
+					}
+				}
+			
 			}
 		}
 	}
