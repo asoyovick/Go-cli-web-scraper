@@ -1,3 +1,5 @@
 module go-cli-web-scraper
 
-go 1.22.2
+go 1.26.0
+
+require golang.org/x/net v0.59.0
