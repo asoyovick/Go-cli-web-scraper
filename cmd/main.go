@@ -41,4 +41,8 @@ func main() {
 	for _, link := range data.Links {
 		fmt.Printf(" - %s\n", link)
 	}
+	fmt.Printf("Images Found (%d:\n)", len(data.Images))
+	for _, img := range data.Images {
+		fmt.Printf(" -%s\n", img)
+	}
 }
