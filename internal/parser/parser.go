@@ -47,5 +47,11 @@ func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, err
 			
 			}
 		}
+		
+		for c := n.FirstChild; c != nil; c= c.NextSibling {
+			traverse(c)
+		}
 	}
+	traverse(doc)
+	return title, links, images, nil
 }
