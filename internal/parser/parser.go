@@ -40,7 +40,7 @@ func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, err
 					if attr.Key == "src" {
 						resolved := resolveURL(baseURL, attr.Val)
 						if resolved != "" {
-							images = append(images, reolvec)
+							images = append(images, resolved)
 						}
 					}
 				}
@@ -54,4 +54,15 @@ func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, err
 	}
 	traverse(doc)
 	return title, links, images, nil
+}
+func resolveURL(base *url.URL, href string) string {
+	if base == nil {
+		return href
+	}
+	u, err := url.Parse(href)
+	if err != nil {
+		return href
+	}
+	return base.ResolveReference(u).String()
+
 }
