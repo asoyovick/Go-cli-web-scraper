@@ -22,4 +22,10 @@ func (s *Scraper) Scrape(source string) (*models.PageData, error) {
 	if err != nil { 
 		return nil, fmt.Errorf ("parssing failed: %w", err)
 	}
+	return *models.ParseData{
+		URL:	source,
+		Title:	title,
+		Links:	links,
+		Images:	images,
+	}, nil
 }
