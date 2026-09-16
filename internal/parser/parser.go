@@ -16,13 +16,26 @@ func ExtractData(r io.Reader, rawBaseURL string)(string, []string, []string, err
 	}
 	var title string
 	var links []string
-	var links []string
+	var images []string
 
 	var traverse func(*html.Node)
 	traverse = func(n *html.Node) {
 		if n.Type == html.ElementNode {
 			switch n.Data {
-				case "title"
+			case "title":
+				if n.FirstChild != nil && n.FirstChild.Type == html.TextNode {
+					title = n.FirstChild.Data
+				}	
+			case "a":
+				for _, attr := range n.Attr {
+					if attr.Key == "href" {
+						resolved := resolveURL(baseURL, attr.Val)
+						if resolved != "" {
+							links = append(links, resolved)
+						}
+					}
+				}
+
 			}
 		}
 	}
