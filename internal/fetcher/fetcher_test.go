@@ -155,3 +155,127 @@ func TestFetch_StatusBounds(t *testing.T) {
 		})
 	}
 }
+func TestFetch_NetworkError(t *testing.T) {
+	f := New(2 * time.Second)
+	// Port 0 combined with an already-closed listener guarantees a
+	// connection failure without depending on external network access.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	badURL := srv.URL
+	srv.Close() // server is now unreachable at this address
+
+	rc, _, err := f.FetchSource(badURL)
+	if err == nil {
+		if rc != nil {
+			rc.Close()
+		}
+		t.Fatal("expected a network error, got nil")
+	}
+}
+
+func TestFetch_Timeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(200 * time.Millisecond)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	f := New(50 * time.Millisecond)
+	rc, _, err := f.FetchSource(srv.URL)
+	if err == nil {
+		if rc != nil {
+			rc.Close()
+		}
+		t.Fatal("expected a timeout error, got nil")
+	}
+}
+
+func TestFetch_InvalidURL(t *testing.T) {
+	f := New(5 * time.Second)
+	// isURL will treat this as a URL because it starts with "http://", but
+	// the host portion is invalid, so the request should fail at dial time.
+	rc, _, err := f.FetchSource("http://[::1]:namedport/")
+	if err == nil {
+		if rc != nil {
+			rc.Close()
+		}
+		t.Fatal("expected an error for an invalid URL/host, got nil")
+	}
+}
+
+// --- FetchSource: local files --------------------------------------------
+
+func TestFetch_FileSuccess(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "page.html")
+	content := "<html><body>local</body></html>"
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("failed to write fixture file: %v", err)
+	}
+
+	f := New(5 * time.Second)
+	rc, resolved, err := f.FetchSource(path)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	defer rc.Close()
+
+	wantResolved := "file://" + path
+	if resolved != wantResolved {
+		t.Errorf("resolved = %q, want %q", resolved, wantResolved)
+	}
+
+	body, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatalf("failed to read file: %v", err)
+	}
+	if string(body) != content {
+		t.Errorf("body = %q, want %q", string(body), content)
+	}
+}
+
+func TestFetch_MissingFile(t *testing.T) {
+	f := New(5 * time.Second)
+	rc, resolved, err := f.FetchSource("/nonexistent/path/does-not-exist.html")
+	if err == nil {
+		if rc != nil {
+			rc.Close()
+		}
+		t.Fatal("expected error for missing local file, got nil")
+	}
+	if resolved != "" {
+		t.Errorf("resolved = %q, want empty string on error", resolved)
+	}
+}
+
+func TestFetch_Directory(t *testing.T) {
+	// Opening a directory with os.Open succeeds, but reading from it should
+	// error - exercising a subtler local-file edge case.
+	dir := t.TempDir()
+
+	f := New(5 * time.Second)
+	rc, resolved, err := f.FetchSource(dir)
+	if err != nil {
+		t.Fatalf("os.Open on a directory should not itself error: %v", err)
+	}
+	defer rc.Close()
+
+	if resolved != "file://"+dir {
+		t.Errorf("resolved = %q, want %q", resolved, "file://"+dir)
+	}
+
+	_, readErr := io.ReadAll(rc)
+	if readErr == nil {
+		t.Error("expected a read error when reading a directory as a file")
+	}
+}
+
+func TestFetch_Empty(t *testing.T) {
+	f := New(5 * time.Second)
+	rc, _, err := f.FetchSource("")
+	if err == nil {
+		if rc != nil {
+			rc.Close()
+		}
+		t.Fatal("expected an error for an empty source string, got nil")
+	}
+}
