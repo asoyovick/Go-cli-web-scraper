@@ -98,3 +98,26 @@ func TestPageData_RoundTrip(t *testing.T) {
 		t.Errorf("StatusCode = %d, want %d", decoded.StatusCode, original.StatusCode)
 	}
 }
+
+func TestConfig_FieldS(t *testing.T) {
+	c := Config{
+		StartURL: "https://example.com",
+		Timeout:  15 * time.Second,
+	}
+	if c.StartURL != "https://example.com" {
+		t.Errorf("StartURL = %q, want %q", c.StartURL, "https://example.com")
+	}
+	if c.Timeout != 15*time.Second {
+		t.Errorf("Timeout = %v, want %v", c.Timeout, 15*time.Second)
+	}
+}
+
+func TestConfig_Zero(t *testing.T) {
+	var c Config
+	if c.StartURL != "" {
+		t.Errorf("StartURL = %q, want empty", c.StartURL)
+	}
+	if c.Timeout != 0 {
+		t.Errorf("Timeout = %v, want 0", c.Timeout)
+	}
+}
