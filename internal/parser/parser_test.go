@@ -243,3 +243,50 @@ func TestExtract_Nested(t *testing.T) {
 		t.Errorf("images = %v, want %v", images, wantImages)
 	}
 }
+func TestExtract_MalformedHTML(t *testing.T) {
+	htmlDoc := `<html><head><title>Broken</title><body><a href="/x">no closing tags`
+	title, links, _, err := ExtractData(strings.NewReader(htmlDoc), "https://example.com")
+	if err != nil {
+		t.Fatalf("unexpected error parsing malformed HTML: %v", err)
+	}
+	if title != "Broken" {
+		t.Errorf("title = %q, want %q", title, "Broken")
+	}
+	if len(links) != 1 || links[0] != "https://example.com/x" {
+		t.Errorf("links = %v, want [https://example.com/x]", links)
+	}
+}
+
+func TestExtract_ReaderError(t *testing.T) {
+	// html.Parse should surface a read error from the underlying reader.
+	_, _, _, err := ExtractData(errReader{}, "https://example.com")
+	if err == nil {
+		t.Fatal("expected an error from a failing reader, got nil")
+	}
+}
+
+func TestExtract_CaseInsensitive(t *testing.T) {
+	htmlDoc := `<HTML><HEAD><TITLE>Upper</TITLE></HEAD><BODY><A HREF="/x">x</A></BODY></HTML>`
+	title, links, _, err := ExtractData(strings.NewReader(htmlDoc), "https://example.com")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if title != "Upper" {
+		t.Errorf("title = %q, want %q", title, "Upper")
+	}
+	if len(links) != 1 || links[0] != "https://example.com/x" {
+		t.Errorf("links = %v, want [https://example.com/x]", links)
+	}
+}
+
+func equalSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
+}
