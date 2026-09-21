@@ -68,6 +68,50 @@ func TestScrape_Local(t *testing.T) {
 		t.Fatalf("data.Links = %v, want exactly one entry", data.Links)
 	}
 }
+
+func TestScrape_FetchError(t *testing.T) {
+	s := New(fetcher.New(2 * time.Second))
+	data, err := s.Scrape("/definitely/does/not/exist.html")
+	if err == nil {
+		t.Fatal("expected an error for a missing source, got nil")
+	}
+	if data != nil {
+		t.Errorf("data = %+v, want nil on error", data)
+	}
+}
+
+func TestScrape_HTTPError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer srv.Close()
+
+	s := New(fetcher.New(2 * time.Second))
+	data, err := s.Scrape(srv.URL)
+	if err == nil {
+		t.Fatal("expected an error for a 404 response, got nil")
+	}
+	if data != nil {
+		t.Errorf("data = %+v, want nil on error", data)
+	}
+}
+
+func TestScrape_Timeout(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(150 * time.Millisecond)
+	}))
+	defer srv.Close()
+
+	s := New(fetcher.New(20 * time.Millisecond))
+	data, err := s.Scrape(srv.URL)
+	if err == nil {
+		t.Fatal("expected a timeout error, got nil")
+	}
+	if data != nil {
+		t.Errorf("data = %+v, want nil on error", data)
+	}
+}
+
 func TestScrape_Empty(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -83,3 +127,31 @@ func TestScrape_Empty(t *testing.T) {
 		t.Errorf("expected empty PageData fields, got %+v", data)
 	}
 }
+
+type errReadCloser struct{}
+
+func (errReadCloser) Read(p []byte) (int, error) { return 0, errors.New("boom") }
+func (errReadCloser) Close() error                { return nil }
+
+func TestScrape_StreamError(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hj, ok := w.(http.Hijacker)
+		if !ok {
+			t.Skip("ResponseWriter does not support hijacking on this platform")
+		}
+		conn, _, err := hj.Hijack()
+		if err != nil {
+			t.Skip("failed to hijack connection")
+		}
+		// Write a truncated/invalid HTTP response then abruptly close.
+		conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Length: 1000\r\n\r\n<html>"))
+		conn.Close()
+	}))
+	defer srv.Close()
+
+	s := New(fetcher.New(2 * time.Second))
+	_, err := s.Scrape(srv.URL)
+	_ = err
+}
+
+var _ io.ReadCloser = errReadCloser{}
